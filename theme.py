@@ -1,0 +1,48 @@
+"""
+深色主题配置 - 模仿 VS Code 深色主题
+"""
+
+# 主色调
+BG_DARK = "#1e1e1e"
+BG_SIDEBAR = "#252526"
+BG_PANEL = "#2d2d2d"
+BG_INPUT = "#3c3c3c"
+BG_HOVER = "#37373d"
+BG_SELECTED = "#04395e"
+BG_EDITOR = "#1e1e1e"
+
+# 边框
+BORDER_COLOR = "#3c3c3c"
+BORDER_FOCUS = "#007fd4"
+
+# 文字
+TEXT_PRIMARY = "#cccccc"
+TEXT_SECONDARY = "#969696"
+TEXT_DIM = "#6a6a6a"
+TEXT_WHITE = "#ffffff"
+TEXT_LINK = "#3794ff"
+
+# 状态颜色
+STATUS_MODIFIED = "#e2c08d"
+STATUS_ADDED = "#73c991"
+STATUS_DELETED = "#f47067"
+STATUS_RENAMED = "#82aaff"
+STATUS_UNTRACKED = "#c59fff"
+STATUS_CONFLICT = "#f47067"
+
+# 按钮
+BTN_PRIMARY = "#0e639c"
+BTN_PRIMARY_HOVER = "#1177bb"
+BTN_GREEN = "#238636"
+BTN_GREEN_HOVER = "#2ea043"
+BTN_RED = "#c53535"
+BTN_RED_HOVER = "#d32f2f"
+
+# 分隔线
+SEPARATOR = "#3c3c3c"
+
+# Diff 颜色
+DIFF_ADD_BG = "#2ea04320"
+DIFF_DEL_BG = "#c5353520"
+DIFF_ADD_TEXT = "#73c991"
+DIFF_DEL_TEXT = "#f47067"
