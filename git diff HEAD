@@ -1,0 +1,84 @@
+warning: in the working copy of 'ui_main.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/ui_main.py b/ui_main.py[m
+[1mindex 0e0c6da..bbaaa81 100644[m
+[1m--- a/ui_main.py[m
+[1m+++ b/ui_main.py[m
+[36m@@ -553,9 +553,10 @@[m [mclass GitManagerApp(ctk.CTk):[m
+     # 菜单[m
+     # ═══════════════════════════════════════════════════════[m
+     def _make_menu(self):[m
+[31m-        return Menu(self, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY,[m
+[31m-                    activebackground=BG_SELECTED, activeforeground=TEXT_WHITE,[m
+[31m-                    borderwidth=1, relief="flat")[m
+[32m+[m[32m        m = Menu(self, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY,[m
+[32m+[m[32m                 activebackground=BG_SELECTED, activeforeground=TEXT_WHITE,[m
+[32m+[m[32m                 borderwidth=1, relief="flat", font=(self.F, 11))[m
+[32m+[m[32m        return m[m
+ [m
+     def _show_commit_menu(self):[m
+         m = self._make_menu()[m
+[36m@@ -571,7 +572,7 @@[m [mclass GitManagerApp(ctk.CTk):[m
+         m = self._make_menu()[m
+         m.add_command(label="树结构查看")[m
+         m.add_separator()[m
+[31m-        v = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        v = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         v.add_command(label="按名称排序"); v.add_command(label="按状态排序")[m
+         m.add_cascade(label="查看和排序", menu=v)[m
+         m.add_separator()[m
+[36m@@ -581,7 +582,7 @@[m [mclass GitManagerApp(ctk.CTk):[m
+         m.add_command(label="签出到...", command=self._checkout_dialog)[m
+         m.add_command(label="抓取", command=self._fetch)[m
+         m.add_separator()[m
+[31m-        cm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        cm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         cm.add_command(label="提交", command=self._commit)[m
+         cm.add_command(label="提交已暂存文件", command=self._commit)[m
+         cm.add_command(label="全部提交    Ctrl+Alt+K", command=self._commit_all)[m
+[36m@@ -592,12 +593,12 @@[m [mclass GitManagerApp(ctk.CTk):[m
+         cm.add_command(label="提交(已签收)", command=lambda: self._commit_signed("--signoff"))[m
+         cm.add_command(label="提交(已签名)", command=lambda: self._commit_signed("--gpg-sign"))[m
+         m.add_cascade(label="提交", menu=cm)[m
+[31m-        ch = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        ch = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         ch.add_command(label="暂存所有更改", command=self._stage_all)[m
+         ch.add_command(label="取消暂存所有更改", command=self._unstage_all)[m
+         ch.add_command(label="放弃所有更改", command=self._discard_all)[m
+         m.add_cascade(label="更改", menu=ch)[m
+[31m-        sp = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        sp = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         sp.add_command(label="同步    Ctrl+T", command=self._sync)[m
+         sp.add_separator()[m
+         sp.add_command(label="拉取", command=self._pull)[m
+[36m@@ -607,7 +608,7 @@[m [mclass GitManagerApp(ctk.CTk):[m
+         sp.add_separator()[m
+         sp.add_command(label="抓取", command=self._fetch)[m
+         m.add_cascade(label="拉取, 推送", menu=sp)[m
+[31m-        bm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        bm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         bm.add_command(label="合并...", command=self._merge_dialog)[m
+         bm.add_command(label="变基分支...", command=self._rebase_dialog)[m
+         bm.add_separator()[m
+[36m@@ -616,11 +617,11 @@[m [mclass GitManagerApp(ctk.CTk):[m
+         bm.add_command(label="重命名分支...", command=self._rename_branch_dialog)[m
+         bm.add_command(label="删除分支...", command=self._delete_branch_dialog)[m
+         m.add_cascade(label="分支", menu=bm)[m
+[31m-        rm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        rm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         rm.add_command(label="添加远程存储库...", command=self._add_remote_dialog)[m
+         rm.add_command(label="删除远程存储库", command=self._remove_remote_dialog)[m
+         m.add_cascade(label="远程", menu=rm)[m
+[31m-        st = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        st = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         st.add_command(label="储藏", command=lambda: (self.git.stash(), self._refresh()))[m
+         st.add_command(label="储藏(包含未跟踪)", command=lambda: (self.git.stash(True), self._refresh()))[m
+         st.add_separator()[m
+[36m@@ -629,7 +630,7 @@[m [mclass GitManagerApp(ctk.CTk):[m
+         st.add_separator()[m
+         st.add_command(label="删除所有储藏...", command=lambda: (self.git.stash_clear(), self._refresh()))[m
+         m.add_cascade(label="存储", menu=st)[m
+[31m-        tg = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)[m
+[32m+[m[32m        tg = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED, font=(self.F, 11))[m
+         tg.add_command(label="创建标记...", command=self._create_tag_dialog)[m
+         tg.add_command(label="删除标签...", command=self._delete_tag_dialog)[m
+         tg.add_separator()[m

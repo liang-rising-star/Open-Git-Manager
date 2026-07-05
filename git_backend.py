@@ -74,30 +74,55 @@ class GitBackend:
             branches.append(GitBranch(name=name, is_current=cur, is_remote=remote))
         return branches
 
+    def get_all_info(self):
+        """并行执行所有 git 查询"""
+        import threading
+        results = {}
+
+        def run_cmd(key, args):
+            c, o, _ = self._run(args)
+            results[key] = (c, o)
+
+        t1 = threading.Thread(target=run_cmd, args=('branch', ['branch', '--show-current']))
+        t2 = threading.Thread(target=run_cmd, args=('status', ['status', '--porcelain', '-u']))
+        t3 = threading.Thread(target=run_cmd, args=('remote', ['remote']))
+        t1.start(); t2.start(); t3.start()
+        t1.join(); t2.join(); t3.join()
+
+        branch = results.get('branch', (0, ''))[1].strip()
+        remotes = [l.strip() for l in results.get('remote', (0, ''))[1].strip().split('\n') if l.strip()]
+        files = []
+        c, o = results.get('status', (0, ''))
+        if c == 0:
+            for line in o.strip().split('\n'):
+                ls = line.strip()
+                if not ls or len(ls) < 3: continue
+                s = ls[0]
+                path = ls[3:]
+                if s == ' ': continue
+                staged = s in ('A', 'M', 'D', 'R', 'C')
+                if s == 'R':
+                    parts = path.split(' -> ', 1)
+                    path = parts[-1] if len(parts) > 1 else path
+                files.append(GitFile(status=s, path=path, staged=staged))
+
+        return branch, files, remotes
+
     def get_changed_files(self):
         files = []
-        c, o, _ = self._run(['diff','--cached','--name-status'])
+        c, o, _ = self._run(['status', '--porcelain', '-u'])
         if c == 0:
             for line in o.strip().split('\n'):
                 line = line.strip()
-                if not line: continue
-                p = line.split('\t', 1)
-                if len(p) >= 2:
-                    files.append(GitFile(status=p[0][0], path=p[-1], staged=True))
-        c, o, _ = self._run(['diff','--name-status'])
-        if c == 0:
-            for line in o.strip().split('\n'):
-                line = line.strip()
-                if not line: continue
-                p = line.split('\t', 1)
-                if len(p) >= 2 and not any(f.path == p[-1] for f in files):
-                    files.append(GitFile(status=p[0][0], path=p[-1], staged=False))
-        c, o, _ = self._run(['ls-files','--others','--exclude-standard'])
-        if c == 0:
-            for line in o.strip().split('\n'):
-                line = line.strip()
-                if line and not any(f.path == line for f in files):
-                    files.append(GitFile(status='?', path=line, staged=False))
+                if not line or len(line) < 3: continue
+                s = line[0]
+                path = line[3:]
+                if s == ' ': continue
+                staged = s in ('A', 'M', 'D', 'R', 'C')
+                if s == 'R':
+                    parts = path.split(' -> ', 1)
+                    path = parts[-1] if len(parts) > 1 else path
+                files.append(GitFile(status=s, path=path, staged=staged))
         return files
 
     def stage_file(self, p):

@@ -1,9 +1,130 @@
 """主界面 - 精确还原截图中的 VS Code 风格 Git 管理器"""
 import os
 import customtkinter as ctk
-from tkinter import filedialog, messagebox, Menu
+from tkinter import filedialog, messagebox
 from theme import *
 from git_backend import GitBackend, GitFile
+
+
+class LiteMenu(ctk.CTkToplevel):
+    """轻量深色弹出菜单"""
+
+    _root_menu = None
+
+    def __init__(self, parent, items):
+        super().__init__(parent)
+        self.overrideredirect(True)
+        self.attributes("-topmost", True)
+        self.configure(fg_color=BG_PANEL, corner_radius=8)
+        self.configure(width=200)
+        self._parent = parent
+        self._sub = None
+        self._hover_trigger = False  # 鼠标是否在某个二级菜单触发器上
+
+        for item in items:
+            if item == "---":
+                sep = ctk.CTkFrame(self, fg_color=SEPARATOR, height=1)
+                sep.pack(fill="x", padx=8, pady=4)
+                sep.bind("<Enter>", lambda e: self._on_leave_trigger())
+            elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], list):
+                label, children = item
+                row = ctk.CTkFrame(self, fg_color="transparent", height=30)
+                row.pack(fill="x", padx=4, pady=1)
+                row.pack_propagate(False)
+                ctk.CTkLabel(row, text=label, font=(parent.F,13), text_color=TEXT_PRIMARY,
+                             anchor="w").pack(side="left", padx=8)
+                ctk.CTkLabel(row, text="▸", font=(parent.F,13), text_color=TEXT_DIM).pack(side="right", padx=8)
+                row.bind("<Enter>", lambda e, r=row, c=children: self._on_enter_trigger(r, c))
+                row.bind("<Leave>", lambda e: self._on_leave_trigger())
+            else:
+                label, cmd = item
+                btn = ctk.CTkButton(self, text=label, anchor="w", fg_color="transparent",
+                    hover_color=BG_HOVER, text_color=TEXT_PRIMARY,
+                    font=(parent.F,13), height=30, corner_radius=4,
+                    command=lambda c=cmd: (self._close_root(), c() if c else None))
+                btn.pack(fill="x", padx=4, pady=1)
+                btn.bind("<Enter>", lambda e: self._on_leave_trigger())
+
+    def _on_enter_trigger(self, widget, children):
+        """鼠标进入二级菜单触发器"""
+        self._hover_trigger = True
+        # 高亮当前行
+        widget.configure(fg_color=BG_HOVER)
+        # 关闭旧子菜单
+        if self._sub and self._sub.winfo_exists():
+            try: self._sub._close_all()
+            except: pass
+        # 打开新子菜单
+        x = self.winfo_rootx() + self.winfo_width()
+        y = widget.winfo_rooty()
+        sub = LiteMenu(self._parent, children)
+        self._sub = sub
+        sub.geometry(f"+{x}+{y}")
+
+    def _on_leave_trigger(self):
+        """鼠标离开二级菜单触发器"""
+        self._hover_trigger = False
+
+    def _close_sub(self):
+        """关闭子菜单"""
+        if self._sub and self._sub.winfo_exists():
+            try: self._sub._close_all()
+            except: pass
+        self._sub = None
+
+    def _close_root(self):
+        root = LiteMenu._root_menu
+        if root:
+            try: root._close_all()
+            except: pass
+        LiteMenu._root_menu = None
+
+    def _close_all(self):
+        if self._sub and self._sub.winfo_exists():
+            try: self._sub._close_all()
+            except: pass
+        try: self.destroy()
+        except: pass
+
+    def popup(self, x, y):
+        LiteMenu._root_menu = self
+        self.geometry(f"+{x}+{y}")
+        self.focus_set()
+        self.after(150, self._start_check)
+
+    def _start_check(self):
+        if self.winfo_exists():
+            self._check_mouse()
+
+    def _check_mouse(self):
+        try:
+            if not self.winfo_exists():
+                return
+            mx = self.winfo_pointerx()
+            my = self.winfo_pointery()
+            root = LiteMenu._root_menu
+            if not root or not root.winfo_exists():
+                return
+
+            def in_rect(menu):
+                if not menu or not menu.winfo_exists():
+                    return False
+                wx, wy = menu.winfo_rootx(), menu.winfo_rooty()
+                ww, wh = menu.winfo_width(), menu.winfo_height()
+                return wx <= mx <= wx+ww and wy <= my <= wy+wh
+
+            in_root = in_rect(root)
+            in_sub = in_rect(root._sub) if root._sub and root._sub.winfo_exists() else False
+
+            if in_root or in_sub:
+                root.after(100, root._check_mouse)
+                return
+
+            # 鼠标不在任何菜单内
+            root._close_all()
+            LiteMenu._root_menu = None
+        except:
+            pass
 
 
 class GitManagerApp(ctk.CTk):
@@ -552,110 +673,111 @@ class GitManagerApp(ctk.CTk):
     # ═══════════════════════════════════════════════════════
     # 菜单
     # ═══════════════════════════════════════════════════════
-    def _make_menu(self):
-        return Menu(self, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY,
-                    activebackground=BG_SELECTED, activeforeground=TEXT_WHITE,
-                    borderwidth=1, relief="flat")
+
 
     def _show_commit_menu(self):
-        m = self._make_menu()
-        m.add_command(label="提交", command=self._commit)
-        m.add_command(label="提交(修改)", command=self._commit_amend)
-        m.add_separator()
-        m.add_command(label="提交和推送", command=self._commit_push)
-        m.add_command(label="提交和同步", command=self._commit_sync)
-        try: m.tk_popup(self.winfo_rootx()+280, self.winfo_rooty()+185)
-        finally: m.grab_release()
+        items = [
+            ("提交", self._commit),
+            ("提交(修改)", self._commit_amend),
+            "---",
+            ("提交和推送", self._commit_push),
+            ("提交和同步", self._commit_sync),
+        ]
+        m = LiteMenu(self, items)
+        m.popup(self.winfo_rootx()+280, self.winfo_rooty()+185)
 
     def _show_more_menu(self):
-        m = self._make_menu()
-        m.add_command(label="树结构查看")
-        m.add_separator()
-        v = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        v.add_command(label="按名称排序"); v.add_command(label="按状态排序")
-        m.add_cascade(label="查看和排序", menu=v)
-        m.add_separator()
-        m.add_command(label="拉取", command=self._pull)
-        m.add_command(label="推送", command=self._push)
-        m.add_command(label="克隆", command=self._clone_dialog)
-        m.add_command(label="签出到...", command=self._checkout_dialog)
-        m.add_command(label="抓取", command=self._fetch)
-        m.add_separator()
-        cm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        cm.add_command(label="提交", command=self._commit)
-        cm.add_command(label="提交已暂存文件", command=self._commit)
-        cm.add_command(label="全部提交    Ctrl+Alt+K", command=self._commit_all)
-        cm.add_command(label="撤消上次提交", command=self._undo_last)
-        cm.add_separator()
-        cm.add_command(label="提交(修改)", command=self._commit_amend)
-        cm.add_separator()
-        cm.add_command(label="提交(已签收)", command=lambda: self._commit_signed("--signoff"))
-        cm.add_command(label="提交(已签名)", command=lambda: self._commit_signed("--gpg-sign"))
-        m.add_cascade(label="提交", menu=cm)
-        ch = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        ch.add_command(label="暂存所有更改", command=self._stage_all)
-        ch.add_command(label="取消暂存所有更改", command=self._unstage_all)
-        ch.add_command(label="放弃所有更改", command=self._discard_all)
-        m.add_cascade(label="更改", menu=ch)
-        sp = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        sp.add_command(label="同步    Ctrl+T", command=self._sync)
-        sp.add_separator()
-        sp.add_command(label="拉取", command=self._pull)
-        sp.add_command(label="拉取(变基)", command=self._pull_rebase)
-        sp.add_separator()
-        sp.add_command(label="推送", command=self._push)
-        sp.add_separator()
-        sp.add_command(label="抓取", command=self._fetch)
-        m.add_cascade(label="拉取, 推送", menu=sp)
-        bm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        bm.add_command(label="合并...", command=self._merge_dialog)
-        bm.add_command(label="变基分支...", command=self._rebase_dialog)
-        bm.add_separator()
-        bm.add_command(label="创建分支...", command=self._create_branch_dialog)
-        bm.add_separator()
-        bm.add_command(label="重命名分支...", command=self._rename_branch_dialog)
-        bm.add_command(label="删除分支...", command=self._delete_branch_dialog)
-        m.add_cascade(label="分支", menu=bm)
-        rm = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        rm.add_command(label="添加远程存储库...", command=self._add_remote_dialog)
-        rm.add_command(label="删除远程存储库", command=self._remove_remote_dialog)
-        m.add_cascade(label="远程", menu=rm)
-        st = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        st.add_command(label="储藏", command=lambda: (self.git.stash(), self._refresh()))
-        st.add_command(label="储藏(包含未跟踪)", command=lambda: (self.git.stash(True), self._refresh()))
-        st.add_separator()
-        st.add_command(label="应用最新储藏", command=lambda: (self.git.stash_apply(), self._refresh()))
-        st.add_command(label="弹出最新储藏", command=lambda: (self.git.stash_pop(), self._refresh()))
-        st.add_separator()
-        st.add_command(label="删除所有储藏...", command=lambda: (self.git.stash_clear(), self._refresh()))
-        m.add_cascade(label="存储", menu=st)
-        tg = Menu(m, tearoff=0, bg=BG_PANEL, fg=TEXT_PRIMARY, activebackground=BG_SELECTED)
-        tg.add_command(label="创建标记...", command=self._create_tag_dialog)
-        tg.add_command(label="删除标签...", command=self._delete_tag_dialog)
-        tg.add_separator()
-        tg.add_command(label="推送标记", command=lambda: (self.git.push_tags(), self._refresh()))
-        m.add_cascade(label="标记", menu=tg)
-        m.add_separator()
-        m.add_command(label="显示 GIT 输出")
-        try: m.tk_popup(self.winfo_pointerx(), self.winfo_pointery())
-        finally: m.grab_release()
+        items = [
+            ("树结构查看", None),
+            "---",
+            ("查看和排序", [
+                ("按名称排序", None),
+                ("按状态排序", None),
+            ]),
+            "---",
+            ("拉取", self._pull),
+            ("推送", self._push),
+            ("克隆", self._clone_dialog),
+            ("签出到...", self._checkout_dialog),
+            ("抓取", self._fetch),
+            "---",
+            ("提交", [
+                ("提交", self._commit),
+                ("提交已暂存文件", self._commit),
+                ("全部提交", self._commit_all),
+                ("撤消上次提交", self._undo_last),
+                "---",
+                ("提交(修改)", self._commit_amend),
+                "---",
+                ("提交(已签收)", lambda: self._commit_signed("--signoff")),
+                ("提交(已签名)", lambda: self._commit_signed("--gpg-sign")),
+            ]),
+            ("更改", [
+                ("暂存所有更改", self._stage_all),
+                ("取消暂存所有更改", self._unstage_all),
+                ("放弃所有更改", self._discard_all),
+            ]),
+            ("拉取, 推送", [
+                ("同步", self._sync),
+                "---",
+                ("拉取", self._pull),
+                ("拉取(变基)", self._pull_rebase),
+                "---",
+                ("推送", self._push),
+                "---",
+                ("抓取", self._fetch),
+            ]),
+            ("分支", [
+                ("合并...", self._merge_dialog),
+                ("变基分支...", self._rebase_dialog),
+                "---",
+                ("创建分支...", self._create_branch_dialog),
+                "---",
+                ("重命名分支...", self._rename_branch_dialog),
+                ("删除分支...", self._delete_branch_dialog),
+            ]),
+            ("远程", [
+                ("添加远程存储库...", self._add_remote_dialog),
+                ("删除远程存储库", self._remove_remote_dialog),
+            ]),
+            ("存储", [
+                ("储藏", lambda: (self.git.stash(), self._refresh())),
+                ("储藏(包含未跟踪)", lambda: (self.git.stash(True), self._refresh())),
+                "---",
+                ("应用最新储藏", lambda: (self.git.stash_apply(), self._refresh())),
+                ("弹出最新储藏", lambda: (self.git.stash_pop(), self._refresh())),
+                "---",
+                ("删除所有储藏...", lambda: (self.git.stash_clear(), self._refresh())),
+            ]),
+            ("标记", [
+                ("创建标记...", self._create_tag_dialog),
+                ("删除标签...", self._delete_tag_dialog),
+                "---",
+                ("推送标记", lambda: (self.git.push_tags(), self._refresh())),
+            ]),
+            "---",
+            ("显示 GIT 输出", None),
+        ]
+        m = LiteMenu(self, items)
+        m.popup(self.winfo_pointerx(), self.winfo_pointery())
 
     def _file_ctx_menu(self, event, f, staged):
-        m = self._make_menu()
-        m.add_command(label="打开文件", command=lambda: self.git.open_file(f.path))
-        m.add_command(label="打开差异", command=lambda: self._show_diff_view(f))
-        m.add_separator()
-        if staged:
-            m.add_command(label="取消暂存", command=lambda: (self.git.unstage_file(f.path), self._refresh()))
-        else:
-            m.add_command(label="暂存文件", command=lambda: (self.git.stage_file(f.path), self._refresh()))
-        m.add_command(label="丢弃更改", command=lambda: self._discard(f.path))
-        m.add_separator()
         full = os.path.join(self.git.repo_path, f.path)
-        m.add_command(label="在资源管理器中显示",
-            command=lambda: os.startfile(os.path.dirname(full)) if os.path.exists(full) else None)
-        try: m.tk_popup(event.x_root, event.y_root)
-        finally: m.grab_release()
+        items = [
+            ("打开文件", lambda: self.git.open_file(f.path)),
+            ("打开差异", lambda: self._show_diff_view(f)),
+            "---",
+        ]
+        if staged:
+            items.append(("取消暂存", lambda: (self.git.unstage_file(f.path), self._refresh())))
+        else:
+            items.append(("暂存文件", lambda: (self.git.stage_file(f.path), self._refresh())))
+        items.append(("丢弃更改", lambda: self._discard(f.path)))
+        items.append("---")
+        items.append(("在资源管理器中显示",
+            lambda: os.startfile(os.path.dirname(full)) if os.path.exists(full) else None))
+        m = LiteMenu(self, items)
+        m.popup(event.x_root, event.y_root)
 
     # ═══════════════════════════════════════════════════════
     # 菜单操作
