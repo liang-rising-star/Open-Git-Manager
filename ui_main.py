@@ -75,12 +75,40 @@ class GitManagerApp(ctk.CTk):
         self.panel.grid_rowconfigure(1, weight=1)
         self.panel_content.grid_columnconfigure(0, weight=1)
 
-        bot = ctk.CTkFrame(self.panel, fg_color=BG_PANEL, height=80, corner_radius=0)
+        bot = ctk.CTkFrame(self.panel, fg_color=BG_PANEL, height=140, corner_radius=0)
         bot.grid(row=2, column=0, sticky="sew")
         bot.grid_propagate(False)
+
         self.repo_name_lbl = ctk.CTkLabel(bot, text="▸ 存储库  未打开仓库",
             font=(self.F,14), text_color=TEXT_PRIMARY, anchor="w")
-        self.repo_name_lbl.pack(fill="x", padx=10, pady=(8,3))
+        self.repo_name_lbl.pack(fill="x", padx=10, pady=(6,2))
+
+        # 远程存储库列表
+        remote_hdr = ctk.CTkFrame(bot, fg_color="transparent")
+        remote_hdr.pack(fill="x", padx=10)
+        ctk.CTkLabel(remote_hdr, text="远程存储库", font=(self.F,11,"bold"),
+                     text_color=TEXT_SECONDARY).pack(side="left")
+        ctk.CTkButton(remote_hdr, text="刷新", width=36, height=20, fg_color="transparent",
+            hover_color=BG_HOVER, text_color=TEXT_SECONDARY, font=(self.F,9),
+            command=self._refresh_remotes).pack(side="right")
+
+        self.remote_list_frame = ctk.CTkFrame(bot, fg_color="transparent", height=20)
+        self.remote_list_frame.pack(fill="x", padx=10, pady=(2,0))
+        self.remote_list_frame.pack_propagate(False)
+        self.remote_checkboxes = []
+
+        # 推送按钮行
+        push_frame = ctk.CTkFrame(bot, fg_color="transparent", height=28)
+        push_frame.pack(fill="x", padx=10, pady=(4,4))
+        push_frame.pack_propagate(False)
+        ctk.CTkButton(push_frame, text="推送选中", fg_color=BTN_PRIMARY,
+            hover_color=BTN_PRIMARY_HOVER, text_color=TEXT_WHITE,
+            font=(self.F,10), height=24, width=70,
+            command=self._push_selected).pack(side="left", padx=(0,4))
+        ctk.CTkButton(push_frame, text="全部推送", fg_color=BTN_GREEN,
+            hover_color=BTN_GREEN_HOVER, text_color=TEXT_WHITE,
+            font=(self.F,10), height=24, width=70,
+            command=self._push_all_remotes).pack(side="left")
 
     # ═══════════════════════════════════════════════════════
     # 右侧主内容区域
@@ -101,9 +129,12 @@ class GitManagerApp(ctk.CTk):
 
         left = ctk.CTkFrame(sb, fg_color="transparent")
         left.pack(side="left", fill="y", padx=5)
-        self.branch_lbl = ctk.CTkLabel(left, text="⑂",
+        self.branch_icon_lbl = ctk.CTkLabel(left, text="⑂",
+                                       font=(self.F,22), text_color=TEXT_PRIMARY)
+        self.branch_icon_lbl.pack(side="left", padx=(5,2))
+        self.branch_lbl = ctk.CTkLabel(left, text="",
                                        font=(self.F,14), text_color=TEXT_PRIMARY)
-        self.branch_lbl.pack(side="left", padx=(5,10))
+        self.branch_lbl.pack(side="left", padx=(0,10))
         ctk.CTkLabel(left, text="↻ 0↓ 0↑", font=(self.F,14),
                      text_color=TEXT_PRIMARY).pack(side="left", padx=5)
         ctk.CTkLabel(left, text="⊘ 0 ⚠ 0", font=(self.F,14),
@@ -188,23 +219,34 @@ class GitManagerApp(ctk.CTk):
         for w in self.panel_content.winfo_children(): w.destroy()
         for w in self.main.winfo_children(): w.destroy()
 
+        # 主要说明文字（白色）
         ctk.CTkLabel(self.panel_content, text="当前打开的文件夹中没有 Git 存储库。\n可初始化一个仓库。它将实现 Git\n提供支持的源代码管理功能。",
-            font=(self.F,18), text_color=TEXT_PRIMARY,
-            justify="left", wraplength=280).pack(padx=10, pady=(10,10), anchor="w")
-        ctk.CTkButton(self.panel_content, text="初始化仓库", fg_color=BG_INPUT,
-            hover_color=BG_HOVER, text_color=TEXT_PRIMARY, font=(self.F,18),
-            height=44, width=200, border_width=1, border_color=BORDER_COLOR,
-            command=self._init_repo).pack(padx=10, pady=(0,12), anchor="w")
-        ctk.CTkLabel(self.panel_content, text="若需详细了解如何在 VS Code 中使用\nGit 和源代码管理参阅我们的文档。",
-            font=(self.F,14), text_color=TEXT_DIM,
-            justify="left", wraplength=280).pack(padx=10, pady=(0,12), anchor="w")
+            font=(self.F,15), text_color=TEXT_PRIMARY,
+            justify="left", wraplength=280).pack(padx=12, pady=(10,10), anchor="w", fill="x")
+
+        # 初始化仓库按钮
+        ctk.CTkButton(self.panel_content, text="初始化仓库", fg_color="transparent",
+            hover_color=BG_HOVER, text_color=TEXT_PRIMARY, font=(self.F,15),
+            height=42, border_width=1, border_color=BORDER_COLOR,
+            command=self._init_repo).pack(padx=12, pady=(0,14), anchor="w", fill="x")
+
+        # GitHub 发布说明（灰色）
         ctk.CTkLabel(self.panel_content, text="可以直接将此文件夹发布到 GitHub 仓库。\n发布后，你将有权访问由 Git 和\nGitHub 提供支持的源代码管理功能。",
-            font=(self.F,14), text_color=TEXT_DIM,
-            justify="left", wraplength=280).pack(padx=10, pady=(0,8), anchor="w")
-        ctk.CTkButton(self.panel_content, text="⊕ 发布到 GitHub", fg_color=BG_INPUT,
-            hover_color=BG_HOVER, text_color=TEXT_PRIMARY, font=(self.F,18),
-            height=44, width=200, border_width=1, border_color=BORDER_COLOR,
-            command=self._open_folder).pack(padx=10, pady=(0,10), anchor="w")
+            font=(self.F,13), text_color=TEXT_DIM,
+            justify="left", wraplength=280).pack(padx=12, pady=(0,10), anchor="w", fill="x")
+
+        # 发布到 GitHub 按钮
+        gh_icon_path = os.path.join(os.path.dirname(__file__), "resource", "system", "icon", "GitHub", "github.png")
+        gh_btn = ctk.CTkButton(self.panel_content, text="发布到 GitHub", fg_color="transparent",
+            hover_color=BG_HOVER, text_color=TEXT_PRIMARY, font=(self.F,15),
+            height=42, border_width=1, border_color=BORDER_COLOR,
+            command=self._open_folder)
+        gh_btn.pack(padx=12, pady=(0,10), anchor="w", fill="x")
+        if os.path.exists(gh_icon_path):
+            from PIL import Image
+            gh_img = ctk.CTkImage(light_image=Image.open(gh_icon_path), size=(32, 32))
+            gh_btn.configure(image=gh_img, compound="left")
+
         self.repo_name_lbl.configure(text=f"▸ 存储库  {folder_name}")
 
         ph = ctk.CTkFrame(self.main, fg_color=BG_EDITOR, corner_radius=0)
@@ -320,7 +362,8 @@ class GitManagerApp(ctk.CTk):
     def _refresh(self):
         if not self.git.is_git_repo(): return
         self.repo_name_lbl.configure(text=f"▸ 存储库  {os.path.basename(self.git.repo_path)}")
-        self.branch_lbl.configure(text=f"⑂ {self.git.get_current_branch()}")
+        self.branch_lbl.configure(text=f" {self.git.get_current_branch()}")
+        self._refresh_remotes()
         if not hasattr(self, 'files_frame'): return
 
         files = self.git.get_changed_files()
@@ -429,6 +472,48 @@ class GitManagerApp(ctk.CTk):
     def _init_repo(self):
         ok, msg = self.git.init_repo()
         if ok: self._show_repo_view(); self._refresh()
+
+    def _refresh_remotes(self):
+        """刷新远程仓库列表"""
+        for w in self.remote_list_frame.winfo_children(): w.destroy()
+        self.remote_checkboxes = []
+        if not self.git.is_git_repo(): return
+
+        remotes = self.git.get_remotes()
+        if not remotes:
+            ctk.CTkLabel(self.remote_list_frame, text="无远程仓库",
+                font=(self.F,10), text_color=TEXT_DIM).pack(anchor="w")
+            return
+
+        branch = self.git.get_current_branch()
+        for r in remotes:
+            var = ctk.BooleanVar(value=True)
+            cb = ctk.CTkCheckBox(self.remote_list_frame, text=f"{r}  ({branch})",
+                variable=var, font=(self.F,10), text_color=TEXT_PRIMARY,
+                fg_color=BTN_PRIMARY, hover_color=BTN_PRIMARY_HOVER,
+                checkmark_color=TEXT_WHITE, checkbox_width=18, checkbox_height=18,
+                border_width=2, corner_radius=3)
+            cb.pack(anchor="w", pady=0)
+            self.remote_checkboxes.append((r, var))
+
+    def _push_selected(self):
+        """推送选中的远程仓库"""
+        branch = self.git.get_current_branch()
+        for remote, var in self.remote_checkboxes:
+            if var.get():
+                ok, msg = self.git.push(remote, branch)
+                if not ok:
+                    messagebox.showerror(f"推送到 {remote} 失败", msg)
+        self._refresh()
+
+    def _push_all_remotes(self):
+        """推送到所有远程仓库"""
+        branch = self.git.get_current_branch()
+        for remote, var in self.remote_checkboxes:
+            ok, msg = self.git.push(remote, branch)
+            if not ok:
+                messagebox.showerror(f"推送到 {remote} 失败", msg)
+        self._refresh()
 
     def _stage_all(self): self.git.stage_all(); self._refresh()
     def _unstage_all(self): self.git.unstage_all(); self._refresh()
